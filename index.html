@@ -138,7 +138,7 @@
   <div class="modal" id="settings">
     <div class="box">
       <h2>Google 연동 설정</h2>
-      <p>Google Cloud Console에서 발급한 <b>OAuth 클라이언트 ID</b>를 붙여넣으세요. (최초 1회, 브라우저에 저장됩니다)</p>
+      <p>클라이언트 ID가 이미 내장되어 있어 바로 사용할 수 있습니다. 다른 ID로 바꾸려면 아래에 입력 후 저장하세요. (비우고 저장하면 내장값으로 되돌아갑니다)</p>
       <input id="clientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
       <div class="actions">
         <button class="btn cancel" onclick="closeSettings()">닫기</button>
@@ -160,8 +160,11 @@
   const PERSONAL={name:'박민규',mail:'mingyu9321@gmail.com'};
   const SCOPES='https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks';
 
-  // ---- 설정값 (브라우저 저장) ----
-  let CLIENT_ID = localStorage.getItem('gcal_client_id') || '';
+  // ---- 설정값 ----
+  // 기본 내장 클라이언트 ID (기기에서 바로 사용 가능)
+  const DEFAULT_CLIENT_ID = '957611896400-ddkv74bfdkaspi279qn1d99lbdc8ffmf.apps.googleusercontent.com';
+  // 브라우저에 따로 저장한 값이 있으면 그걸 우선, 없으면 내장값 사용
+  let CLIENT_ID = localStorage.getItem('gcal_client_id') || DEFAULT_CLIENT_ID;
   // 계정별 액세스 토큰 캐시 (메모리)
   const tokens = {}; // { 'mail@...': {token, exp} }
   let tokenClient = null;
@@ -202,8 +205,9 @@
   function openSettings(){$('clientId').value=CLIENT_ID;$('settings').classList.add('show');}
   function closeSettings(){$('settings').classList.remove('show');}
   function saveClientId(){
-    CLIENT_ID=$('clientId').value.trim();
-    localStorage.setItem('gcal_client_id',CLIENT_ID);
+    const v=$('clientId').value.trim();
+    if(v){ CLIENT_ID=v; localStorage.setItem('gcal_client_id',v); }
+    else { CLIENT_ID=DEFAULT_CLIENT_ID; localStorage.removeItem('gcal_client_id'); }
     closeSettings();initTokenClient();
     toast('설정 저장됨');
   }
@@ -223,7 +227,7 @@
     });
     updateConn();
   }
-  window.onload=()=>{ setTimeout(initTokenClient,500); updateConn(); if(!CLIENT_ID) openSettings(); };
+  window.onload=()=>{ setTimeout(initTokenClient,500); updateConn(); };
 
   // 특정 계정으로 토큰 확보 (login_hint로 계정 고정)
   function getToken(email){
