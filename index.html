@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>빠른 등록</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1116">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0e1116;--panel:#171b22;--panel-2:#1e242e;--line:#2a313d;
+    --text:#eef2f7;--muted:#8a95a6;--work:#5b8def;--personal:#4fbf8b;--task:#e0a44d;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:16px;min-height:100dvh;}
+  .sheet{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.45);}
+
+  .topbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .topbar h1{font-size:16px;font-weight:650;margin:0;}
+  .conn{margin-left:auto;font-size:11px;color:var(--muted);border:1px solid var(--line);
+    border-radius:20px;padding:4px 10px;cursor:pointer;}
+  .conn.ok{color:var(--personal);border-color:var(--personal);}
+
+  .kind{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .pill{font-size:12px;font-weight:650;padding:5px 12px;border-radius:20px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--muted);transition:.2s;}
+  .pill.act-event{background:rgba(91,141,239,.15);border-color:var(--work);color:var(--work);}
+  .pill.act-task{background:rgba(224,164,77,.15);border-color:var(--task);color:var(--task);}
+
+  .acct{margin:0 0 16px;display:flex;align-items:center;gap:10px;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:12px;padding:11px 13px;transition:border-color .2s;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--personal);flex:0 0 auto;transition:background .2s;}
+  .acct.work .dot{background:var(--work);}
+  .acct .who{font-size:14px;font-weight:600;}
+  .acct .mail{font-size:12px;color:var(--muted);margin-left:auto;}
+
+  label.f{display:block;margin:0 0 14px;}
+  label.f .cap{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px;}
+  .in{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
+    color:var(--text);font-size:16px;padding:13px 14px;outline:none;transition:border-color .15s;font-family:inherit;}
+  .in:focus{border-color:var(--work);}
+  .in::placeholder{color:#5a6474;}
+  .row{display:flex;gap:10px;}
+  .row .f{flex:1;}
+  .hidden{display:none;}
+
+  .hint{font-size:12px;color:var(--muted);margin:-8px 2px 16px;line-height:1.6;}
+  .hint b{color:var(--work);font-weight:600;}
+  .hint i{color:var(--personal);font-weight:600;font-style:normal;}
+  .hint u{color:var(--task);font-weight:600;text-decoration:none;}
+
+  .actions{display:flex;gap:10px;margin-top:4px;}
+  .btn{flex:1;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:650;
+    font-family:inherit;cursor:pointer;transition:transform .08s,opacity .15s;}
+  .btn:active{transform:scale(.98);}
+  .cancel{background:var(--panel-2);color:var(--muted);border:1px solid var(--line);}
+  .save{background:var(--work);color:#fff;}
+  .save:disabled{opacity:.45;}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(30px);
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:13px 18px;
+    border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;max-width:90vw;
+    box-shadow:0 12px 30px rgba(0,0,0,.4);z-index:10;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.err{border-color:#e2564d;}
+
+  /* 설정 모달 */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;
+    justify-content:center;padding:20px;z-index:20;}
+  .modal.show{display:flex;}
+  .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:20px;max-width:400px;width:100%;}
+  .modal h2{font-size:15px;margin:0 0 12px;}
+  .modal p{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 12px;}
+  .modal input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    color:var(--text);font-size:13px;padding:11px;margin-bottom:10px;font-family:inherit;}
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="topbar">
+      <h1>빠른 등록</h1>
+      <span class="conn" id="conn" onclick="openSettings()">미연결</span>
+    </div>
+
+    <div class="kind">
+      <span class="pill" id="pEvent">일정</span>
+      <span class="pill" id="pTask">할일</span>
+    </div>
+
+    <div class="acct" id="acct">
+      <span class="dot"></span>
+      <span class="who" id="who">개인 · 박민규</span>
+      <span class="mail" id="mail">mingyu9321@gmail.com</span>
+    </div>
+
+    <label class="f">
+      <span class="cap">제목</span>
+      <input class="in" id="title" placeholder="예) [SW2] 팀회의  ·  - 보고서 제출" autocomplete="off">
+    </label>
+    <div class="hint">
+      맨 앞에 <u>- </u>(하이픈+공백)이면 <u>할일</u>, 없으면 일정.<br>
+      <b>[코드]</b>=업무 / 그 외 <i>개인</i> 계정으로 자동 저장.
+    </div>
+
+    <div class="row">
+      <label class="f">
+        <span class="cap" id="dateCap">날짜</span>
+        <input class="in" id="date" type="date">
+      </label>
+      <label class="f" id="timeWrap">
+        <span class="cap">시간</span>
+        <input class="in" id="time" type="time">
+      </label>
+    </div>
+
+    <label class="f" id="placeWrap">
+      <span class="cap">장소 <span style="opacity:.6">(선택)</span></span>
+      <input class="in" id="place" placeholder="예) H6-1" autocomplete="off">
+    </label>
+
+    <div class="actions">
+      <button class="btn cancel" id="cancel">취소</button>
+      <button class="btn save" id="save">저장</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- 최초 1회 설정: OAuth 클라이언트 ID 입력 -->
+  <div class="modal" id="settings">
+    <div class="box">
+      <h2>Google 연동 설정</h2>
+      <p>Google Cloud Console에서 발급한 <b>OAuth 클라이언트 ID</b>를 붙여넣으세요. (최초 1회, 브라우저에 저장됩니다)</p>
+      <input id="clientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
+      <div class="actions">
+        <button class="btn cancel" onclick="closeSettings()">닫기</button>
+        <button class="btn save" onclick="saveClientId()">저장</button>
+      </div>
+    </div>
+  </div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  const $=id=>document.getElementById(id);
+  const titleEl=$('title'),dateEl=$('date'),timeEl=$('time'),placeEl=$('place');
+  const acct=$('acct'),who=$('who'),mail=$('mail'),saveBtn=$('save');
+  const pEvent=$('pEvent'),pTask=$('pTask');
+  const timeWrap=$('timeWrap'),placeWrap=$('placeWrap'),dateCap=$('dateCap');
+  const connEl=$('conn');
+
+  const WORK={name:'[업무]',mail:'minguy93211@gmail.com'};
+  const PERSONAL={name:'박민규',mail:'mingyu9321@gmail.com'};
+  const SCOPES='https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks';
+
+  // ---- 설정값 (브라우저 저장) ----
+  let CLIENT_ID = localStorage.getItem('gcal_client_id') || '';
+  // 계정별 액세스 토큰 캐시 (메모리)
+  const tokens = {}; // { 'mail@...': {token, exp} }
+  let tokenClient = null;
+
+  // 기본값: 내일 09:00
+  (function(){const t=new Date();t.setDate(t.getDate()+1);
+    dateEl.value=t.toISOString().slice(0,10);timeEl.value='09:00';})();
+
+  // ---- 종류/계정 판별 ----
+  const isTask=v=>/^\s*-\s/.test(v);
+  const stripTask=v=>v.replace(/^\s*-\s/,'');
+  const isWork=v=>/^\s*\[.+?\]/.test(stripTask(v));
+
+  function refresh(){
+    const v=titleEl.value;
+    const task=isTask(v), work=isWork(v);
+    pEvent.className='pill'+(task?'':' act-event');
+    pTask.className='pill'+(task?' act-task':'');
+    placeWrap.classList.toggle('hidden',task);
+    dateCap.textContent=task?'마감일':'날짜';
+    timeWrap.querySelector('.cap').textContent=task?'시간 (선택)':'시간';
+    acct.classList.toggle('work',work);
+    who.textContent=work?'업무 · [업무]':'개인 · 박민규';
+    mail.textContent=work?WORK.mail:PERSONAL.mail;
+    saveBtn.style.background=work?'var(--work)':'var(--personal)';
+    saveBtn.textContent=task?'할일 저장':'저장';
+    saveBtn.disabled=stripTask(v).trim()==='';
+  }
+  titleEl.addEventListener('input',refresh);
+
+  function toast(m,isErr){const el=$('toast');el.textContent=m;
+    el.className='toast show'+(isErr?' err':'');
+    clearTimeout(el._t);el._t=setTimeout(()=>el.className='toast',3000);}
+  function reset(){titleEl.value='';placeEl.value='';refresh();titleEl.focus();}
+  $('cancel').onclick=reset;
+
+  // ---- 설정 모달 ----
+  function openSettings(){$('clientId').value=CLIENT_ID;$('settings').classList.add('show');}
+  function closeSettings(){$('settings').classList.remove('show');}
+  function saveClientId(){
+    CLIENT_ID=$('clientId').value.trim();
+    localStorage.setItem('gcal_client_id',CLIENT_ID);
+    closeSettings();initTokenClient();
+    toast('설정 저장됨');
+  }
+  window.openSettings=openSettings;window.closeSettings=closeSettings;window.saveClientId=saveClientId;
+
+  function updateConn(){
+    if(CLIENT_ID){connEl.textContent='설정됨';connEl.classList.add('ok');}
+    else{connEl.textContent='미연결';connEl.classList.remove('ok');}
+  }
+
+  function initTokenClient(){
+    if(!CLIENT_ID || !window.google) return;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: '', // 매 요청 시 지정
+    });
+    updateConn();
+  }
+  window.onload=()=>{ setTimeout(initTokenClient,500); updateConn(); if(!CLIENT_ID) openSettings(); };
+
+  // 특정 계정으로 토큰 확보 (login_hint로 계정 고정)
+  function getToken(email){
+    return new Promise((resolve,reject)=>{
+      if(!tokenClient){reject('설정이 필요합니다');return;}
+      const c=tokens[email];
+      if(c && c.exp>Date.now()+60000){resolve(c.token);return;}
+      tokenClient.callback=(resp)=>{
+        if(resp.error){reject(resp.error);return;}
+        tokens[email]={token:resp.access_token, exp:Date.now()+(resp.expires_in*1000)};
+        resolve(resp.access_token);
+      };
+      tokenClient.requestAccessToken({prompt: c?'':'consent', login_hint: email});
+    });
+  }
+
+  async function api(url,token,body,method='POST'){
+    const r=await fetch(url,{method,
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:body?JSON.stringify(body):undefined});
+    if(!r.ok){const e=await r.text();throw new Error(e);}
+    return r.json();
+  }
+
+  async function saveEvent(target,title,place){
+    const start=`${dateEl.value}T${timeEl.value||'09:00'}:00`;
+    const end=`${dateEl.value}T${addHour(timeEl.value||'09:00')}:00`;
+    const body={summary:title,
+      start:{dateTime:start,timeZone:'Asia/Seoul'},
+      end:{dateTime:end,timeZone:'Asia/Seoul'}};
+    if(place) body.location=place;
+    const token=await getToken(target.mail);
+    // primary = 로그인한 그 계정의 기본 캘린더
+    await api('https://www.googleapis.com/calendar/v3/calendars/primary/events',token,body);
+  }
+
+  async function saveTask(target,title){
+    const body={title:title};
+    if(dateEl.value) body.due=`${dateEl.value}T00:00:00.000Z`;
+    const token=await getToken(target.mail);
+    await api('https://tasks.googleapis.com/tasks/v1/lists/@default/tasks',token,body);
+  }
+
+  function addHour(hm){let[h,m]=hm.split(':').map(Number);h=(h+1)%24;
+    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
+
+  saveBtn.onclick=async()=>{
+    if(!CLIENT_ID){openSettings();return;}
+    const raw=titleEl.value;
+    const task=isTask(raw);
+    const title=stripTask(raw).trim();
+    if(!title){toast('제목을 입력해 주세요',true);return;}
+    const work=isWork(raw),target=work?WORK:PERSONAL;
+    saveBtn.disabled=true;saveBtn.textContent='저장 중…';
+    try{
+      if(task) await saveTask(target,title);
+      else await saveEvent(target,title,placeEl.value.trim());
+      toast(`저장됨 · ${task?'할일':'일정'} → ${target.name}`);
+      setTimeout(reset,500);
+    }catch(e){
+      toast('실패: '+(e.message||e),true);
+      refresh();
+    }
+  };
+
+  refresh();
+
+  // PWA 서비스워커 등록
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+</script>
+</body>
+</html>
