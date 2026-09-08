@@ -1,9 +1,11 @@
-// 앱 셸 캐싱 — 오프라인에서도 화면은 열립니다.
-// (실제 저장은 온라인 + Google 로그인이 필요합니다)
-const CACHE = 'quick-add-v1';
+// 네트워크 우선(Network-first) 방식.
+// 열 때 항상 최신 파일을 먼저 받아오고, 인터넷이 안 될 때만 캐시를 사용합니다.
+// 캐시 이름에 버전을 넣어, 배포 때마다 옛 캐시를 자동 정리합니다.
+const CACHE = 'quick-add-v3';
 const ASSETS = [
   './',
   './index.html',
+  './privacy.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -19,21 +21,32 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.request ? e.request.request.url : e.request.url);
-  // Google API/인증 요청은 절대 캐시하지 않고 항상 네트워크로
+  const req = e.request;
+  const url = new URL(req.url);
+
+  // Google API/인증 요청은 서비스워커가 건드리지 않음 (항상 네트워크)
   if (url.hostname.includes('googleapis.com') ||
       url.hostname.includes('google.com') ||
       url.hostname.includes('gstatic.com')) {
-    return; // 브라우저 기본 처리(네트워크)
+    return;
   }
-  // 그 외(앱 셸)는 캐시 우선, 없으면 네트워크
+
+  // GET 이외(POST 등)는 그대로 통과
+  if (req.method !== 'GET') return;
+
+  // 네트워크 우선: 최신을 먼저 받아오고 캐시에 갱신, 실패 시 캐시로 폴백
   e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request))
+    fetch(req)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
   );
 });
